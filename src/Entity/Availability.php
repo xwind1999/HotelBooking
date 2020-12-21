@@ -33,6 +33,11 @@ class Availability
      */
     private $stock;
 
+    /**
+     * @ORM\Column(type="boolean")
+     */
+    private $stopSale;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -70,6 +75,18 @@ class Availability
     public function setStock(int $stock): self
     {
         $this->stock = $stock;
+
+        return $this;
+    }
+
+    public function getStopSale(): ?bool
+    {
+        return $this->stopSale;
+    }
+
+    public function setStopSale(bool $stopSale): self
+    {
+        $this->stopSale = $stopSale;
 
         return $this;
     }

@@ -34,6 +34,11 @@ class Booking
      */
     private $endAt;
 
+    /**
+     * @ORM\ManyToOne(targetEntity=Customer::class, inversedBy="booking")
+     */
+    private $customer;
+
     public function __construct()
     {
         $this->room = new ArrayCollection();
@@ -88,6 +93,18 @@ class Booking
     public function setEndAt(\DateTimeInterface $endAt): self
     {
         $this->endAt = $endAt;
+
+        return $this;
+    }
+
+    public function getCustomer(): ?Customer
+    {
+        return $this->customer;
+    }
+
+    public function setCustomer(?Customer $customer): self
+    {
+        $this->customer = $customer;
 
         return $this;
     }
