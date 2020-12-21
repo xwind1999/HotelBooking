@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity(repositoryClass=CustomerRepository::class)
  */
-class Customer
+class Customer implements \JsonSerializable
 {
     /**
      * @ORM\Id
@@ -96,5 +96,11 @@ class Customer
         }
 
         return $this;
+    }
+
+    public function jsonSerialize(): array
+    {
+        // TODO: Implement jsonSerialize() method.
+        return get_object_vars($this);
     }
 }

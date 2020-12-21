@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity(repositoryClass=AvaiabilityRepository::class)
  */
-class Availability
+class Availability implements \JsonSerializable
 {
     /**
      * @ORM\Id
@@ -89,5 +89,10 @@ class Availability
         $this->stopSale = $stopSale;
 
         return $this;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return get_object_vars($this);
     }
 }

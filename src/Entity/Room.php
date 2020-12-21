@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity(repositoryClass=RoomRepository::class)
  */
-class Room
+class Room implements \JsonSerializable
 {
     /**
      * @ORM\Id
@@ -165,5 +165,11 @@ class Room
         }
 
         return $this;
+    }
+
+    public function jsonSerialize(): array
+    {
+        // TODO: Implement jsonSerialize() method.
+        return get_object_vars($this);
     }
 }

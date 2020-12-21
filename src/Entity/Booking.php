@@ -6,11 +6,12 @@ use App\Repository\BookingRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\SerializerInterface;
 
 /**
  * @ORM\Entity(repositoryClass=BookingRepository::class)
  */
-class Booking
+class Booking implements \JsonSerializable
 {
     /**
      * @ORM\Id
@@ -38,6 +39,16 @@ class Booking
      * @ORM\ManyToOne(targetEntity=Customer::class, inversedBy="booking")
      */
     private $customer;
+
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $totalPrice;
+
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $stock;
 
     public function __construct()
     {
@@ -107,5 +118,34 @@ class Booking
         $this->customer = $customer;
 
         return $this;
+    }
+
+    public function getTotalPrice(): ?int
+    {
+        return $this->totalPrice;
+    }
+
+    public function setTotalPrice(int $totalPrice): self
+    {
+        $this->totalPrice = $totalPrice;
+
+        return $this;
+    }
+
+    public function getStock(): ?int
+    {
+        return $this->stock;
+    }
+
+    public function setStock(int $stock): self
+    {
+        $this->stock = $stock;
+
+        return $this;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return get_object_vars($this);
     }
 }
