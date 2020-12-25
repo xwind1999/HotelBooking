@@ -4,7 +4,9 @@ namespace App\Controller;
 
 use App\Entity\Booking;
 use App\Entity\BookingRoom;
+use App\Entity\PriceList;
 use App\Entity\Room;
+use Cassandra\Date;
 use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -44,27 +46,57 @@ class BookingRoomController extends AbstractController
         return new JsonResponse($bookings);
     }
 
+//    /**
+//     * @Rest\Post("/new/bookingroom")
+//     * @param Request $request
+//     * @return JsonResponse
+//     * @throws Exception
+//     */
+//    public function newBookingRoom(Request $request): JsonResponse
+//    {
+//        $content = json_decode($request->getContent(),true);
+//        foreach ($content as $item) {
+//            $booking_room = new BookingRoom();
+//            $booking_room->setBookingId($this->entity_manager->getRepository(Booking::class)->find($item['booking_id_id']))
+//                ->setRoomId($this->entity_manager->getRepository(Room::class)->find($item['room_id_id']))
+//                ->setNumber($item['number'])
+//                ->setStartDate(new DateTime($item['start_date']))
+//                ->setEndDate(new DateTime($item['end_date']));
+//            $this->entity_manager->persist($booking_room);
+//        }
+//        $this->entity_manager->flush();
+//        return new JsonResponse("Import Booking room successfully");
+//    }
+
     /**
-     * @Rest\Post("/new/bookingroom")
      * @param Request $request
-     * @return JsonResponse
+     * @Rest\Post("/complete")
      * @throws Exception
      */
-    public function newBookingRoom(Request $request): JsonResponse
+    public function newCompleteBooking(Request $request)
     {
-        $content = json_decode($request->getContent(),true);
-        foreach ($content as $item) {
+        $content = json_decode($request->getContent(), true);
+        $userId = $content["user_id"];
+        $book_time = new DateTime($content["book_time"]);
+        $bookings = $content["bookings"];
+        $totalPrice = 0;
+        foreach ($bookings as $item) {
             $booking_room = new BookingRoom();
             $booking_room->setBookingId($this->entity_manager->getRepository(Booking::class)->find($item['booking_id_id']))
                 ->setRoomId($this->entity_manager->getRepository(Room::class)->find($item['room_id_id']))
                 ->setNumber($item['number'])
                 ->setStartDate(new DateTime($item['start_date']))
                 ->setEndDate(new DateTime($item['end_date']));
+            $totalPrice += $this->entity_manager->getRepository(PriceList::class)->findOneBy(array(
+                'room_id'=>$this->entity_manager->getRepository(Room::class)->find($item['room_id_id']),
+                'date' => $book_time
+            ))->getPrice();
+            dd($totalPrice);
             $this->entity_manager->persist($booking_room);
         }
-        $this->entity_manager->flush();
-        return new JsonResponse("Import Booking room successfully");
-    }
 
+        $this->entity_manager->flush();
+        dd($content);
+    }
 
 }
