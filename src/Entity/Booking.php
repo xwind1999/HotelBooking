@@ -21,21 +21,6 @@ class Booking implements \JsonSerializable
     private $id;
 
     /**
-     * @ORM\ManyToMany(targetEntity=Room::class, inversedBy="bookings")
-     */
-    private $room;
-
-    /**
-     * @ORM\Column(type="datetime")
-     */
-    private $startAt;
-
-    /**
-     * @ORM\Column(type="datetime")
-     */
-    private $endAt;
-
-    /**
      * @ORM\ManyToOne(targetEntity=Customer::class, inversedBy="booking")
      */
     private $customer;
@@ -46,66 +31,23 @@ class Booking implements \JsonSerializable
     private $totalPrice;
 
     /**
-     * @ORM\Column(type="integer")
+     * @ORM\OneToMany(targetEntity=BookingRoom::class, mappedBy="booking_id", orphanRemoval=true)
      */
-    private $stock;
+    private $bookingRooms;
+
+    /**
+     * @ORM\Column(type="datetime")
+     */
+    private $bookTime;
 
     public function __construct()
     {
-        $this->room = new ArrayCollection();
+        $this->bookingRooms = new ArrayCollection();
     }
 
     public function getId(): ?int
     {
         return $this->id;
-    }
-
-    /**
-     * @return Collection|Room[]
-     */
-    public function getRoom(): Collection
-    {
-        return $this->room;
-    }
-
-    public function addRoom(Room $room): self
-    {
-        if (!$this->room->contains($room)) {
-            $this->room[] = $room;
-        }
-
-        return $this;
-    }
-
-    public function removeRoom(Room $room): self
-    {
-        $this->room->removeElement($room);
-
-        return $this;
-    }
-
-    public function getStartAt(): ?\DateTimeInterface
-    {
-        return $this->startAt;
-    }
-
-    public function setStartAt(\DateTimeInterface $startAt): self
-    {
-        $this->startAt = $startAt;
-
-        return $this;
-    }
-
-    public function getEndAt(): ?\DateTimeInterface
-    {
-        return $this->endAt;
-    }
-
-    public function setEndAt(\DateTimeInterface $endAt): self
-    {
-        $this->endAt = $endAt;
-
-        return $this;
     }
 
     public function getCustomer(): ?Customer
@@ -132,20 +74,50 @@ class Booking implements \JsonSerializable
         return $this;
     }
 
-    public function getStock(): ?int
+    public function jsonSerialize(): array
     {
-        return $this->stock;
+        return get_object_vars($this);
     }
 
-    public function setStock(int $stock): self
+    /**
+     * @return Collection|BookingRoom[]
+     */
+    public function getBookingRooms(): Collection
     {
-        $this->stock = $stock;
+        return $this->bookingRooms;
+    }
+
+    public function addBookingRoom(BookingRoom $bookingRoom): self
+    {
+        if (!$this->bookingRooms->contains($bookingRoom)) {
+            $this->bookingRooms[] = $bookingRoom;
+            $bookingRoom->setBookingId($this);
+        }
 
         return $this;
     }
 
-    public function jsonSerialize(): array
+    public function removeBookingRoom(BookingRoom $bookingRoom): self
     {
-        return get_object_vars($this);
+        if ($this->bookingRooms->removeElement($bookingRoom)) {
+            // set the owning side to null (unless already changed)
+            if ($bookingRoom->getBookingId() === $this) {
+                $bookingRoom->setBookingId(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getBookTime(): ?\DateTimeInterface
+    {
+        return $this->bookTime;
+    }
+
+    public function setBookTime(\DateTimeInterface $bookTime): self
+    {
+        $this->bookTime = $bookTime;
+
+        return $this;
     }
 }

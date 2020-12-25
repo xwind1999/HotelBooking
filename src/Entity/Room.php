@@ -40,15 +40,15 @@ class Room implements \JsonSerializable
     private $availabilities;
 
     /**
-     * @ORM\ManyToMany(targetEntity=Booking::class, mappedBy="room")
+     * @ORM\OneToMany(targetEntity=BookingRoom::class, mappedBy="room_id", orphanRemoval=true)
      */
-    private $bookings;
+    private $bookingRooms;
 
     public function __construct()
     {
         $this->priceLists = new ArrayCollection();
         $this->availabilities = new ArrayCollection();
-        $this->bookings = new ArrayCollection();
+        $this->bookingRooms = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -140,36 +140,39 @@ class Room implements \JsonSerializable
         return $this;
     }
 
-    /**
-     * @return Collection|Booking[]
-     */
-    public function getBookings(): Collection
-    {
-        return $this->bookings;
-    }
-
-    public function addBooking(Booking $booking): self
-    {
-        if (!$this->bookings->contains($booking)) {
-            $this->bookings[] = $booking;
-            $booking->addRoom($this);
-        }
-
-        return $this;
-    }
-
-    public function removeBooking(Booking $booking): self
-    {
-        if ($this->bookings->removeElement($booking)) {
-            $booking->removeRoom($this);
-        }
-
-        return $this;
-    }
-
     public function jsonSerialize(): array
     {
         // TODO: Implement jsonSerialize() method.
         return get_object_vars($this);
+    }
+
+    /**
+     * @return Collection|BookingRoom[]
+     */
+    public function getBookingRooms(): Collection
+    {
+        return $this->bookingRooms;
+    }
+
+    public function addBookingRoom(BookingRoom $bookingRoom): self
+    {
+        if (!$this->bookingRooms->contains($bookingRoom)) {
+            $this->bookingRooms[] = $bookingRoom;
+            $bookingRoom->setRoomId($this);
+        }
+
+        return $this;
+    }
+
+    public function removeBookingRoom(BookingRoom $bookingRoom): self
+    {
+        if ($this->bookingRooms->removeElement($bookingRoom)) {
+            // set the owning side to null (unless already changed)
+            if ($bookingRoom->getRoomId() === $this) {
+                $bookingRoom->setRoomId(null);
+            }
+        }
+
+        return $this;
     }
 }

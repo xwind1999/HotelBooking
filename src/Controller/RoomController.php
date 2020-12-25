@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Room;
 use Doctrine\ORM\EntityManagerInterface;
+use FOS\RestBundle\Controller\Annotations as Rest;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -58,5 +59,34 @@ class RoomController extends AbstractController
         $this->entityManager->persist($room);
         $this->entityManager->flush();
         return $this->json("Import room successfully");
+    }
+
+    /**
+     * @Rest\Put("update/room")
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function updateRoom(Request $request): JsonResponse
+    {
+        $content = json_decode($request->getContent(), true);
+        $roomId = $content["id"];
+        $room = $this->entityManager->getRepository(Room::class)->find($roomId);
+        empty($content["name"]) ? true : $room->setName($content["name"]);
+        empty($content["description"]) ? true : $room->setDescription($content["description"]);
+        $this->entityManager->persist($room);
+        $this->entityManager->flush();
+        return new JsonResponse($room);
+    }
+
+    /**
+     * @Rest\Delete("delete/room/{id}")
+     * @param $id
+     * @return JsonResponse
+     */
+    public function deleteRoom($id): JsonResponse
+    {
+        $room = $this->entityManager->getRepository(Room::class)->find($id);
+        $this->entityManager->remove($room);
+        return $this->json("Delete room number ".$id);
     }
 }

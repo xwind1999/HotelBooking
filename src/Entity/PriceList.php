@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity(repositoryClass=PriceListRepository::class)
  */
-class PriceList
+class PriceList implements \JsonSerializable
 {
     /**
      * @ORM\Id
@@ -27,11 +27,6 @@ class PriceList
      * @ORM\Column(type="datetime")
      */
     private $date;
-
-    /**
-     * @ORM\Column(type="integer")
-     */
-    private $stock;
 
     /**
      * @ORM\Column(type="integer")
@@ -77,5 +72,10 @@ class PriceList
         $this->price = $price;
 
         return $this;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return get_object_vars($this);
     }
 }
