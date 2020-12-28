@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Availability;
 use App\Entity\Room;
+use App\Manager\RepositoryManager;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
@@ -18,13 +19,13 @@ use Symfony\Component\Routing\Annotation\Route;
 class AvailabilityController extends AbstractController
 {
     /**
-     * @var EntityManagerInterface
+     * @var RepositoryManager
      */
-    private $entityManager;
+    private $repositoryManager;
 
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(RepositoryManager $repositoryManager, EntityManagerInterface $entityManager)
     {
-        $this->entityManager = $entityManager;
+        $this->repositoryManager = $repositoryManager;
     }
 
     /**
@@ -43,8 +44,7 @@ class AvailabilityController extends AbstractController
      */
     public function getAllAvailabilities(): JsonResponse
     {
-        $availabilities = $this->entityManager->getRepository(Availability::class)->findAll();
-        return new JsonResponse($availabilities);
+        return new JsonResponse($this->repositoryManager->getAllAvailabilities());
     }
 
     /**
@@ -55,40 +55,19 @@ class AvailabilityController extends AbstractController
      */
     public function newAvailability(Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        $date = new DateTime($data['date']);
-        $stock = $data['stock'];
-        $stop_sale = $data['stop_sale'];
-        $room_id = $data['room_id'];
-        if (empty($date) || empty($stock) || empty($stop_sale) || empty($room_id)){
-            throw new NotFoundHttpException('Missing argument');
-        }
-        $availability = new Availability();
-        $availability->setDate($date)
-            ->setStopSale($stop_sale)
-            ->setStock($stock)
-            ->setRoom($this->entityManager->getRepository(Room::class)->find($room_id));
-        $this->entityManager->persist($availability);
-        $this->entityManager->flush();
+        $this->repositoryManager->newAvailability($request);
         return $this->json("Import availability successfully");
     }
 
     /**
      * @Rest\Put("update/availability")
      * @param Request $request
+     * @return JsonResponse
      * @throws Exception
      */
     public function updateAvailability(Request $request): JsonResponse
     {
-        $content = json_decode($request->getContent(), true);
-        $availabilityId = $content["id"];
-        $availability = $this->entityManager->getRepository(Availability::class)->find($availabilityId);
-        empty($content["date"]) ? true : $availability->setDate(new DateTime($content["date"]));
-        empty($content["stock"]) ? true : $availability->setStock($content["stock"]);
-        empty($content["stop_sale"]) ? true : $availability->setStopSale($content["stop_sale"]);
-        empty($content["room_id"]) ? true : $availability->setRoom($this->entityManager->getRepository(Room::class)->find($content["room_id"]));
-        $this->entityManager->persist($availability);
-        $this->entityManager->flush();
-        return new JsonResponse($availability);
+        $this->updateAvailability($request);
+        return $this->json("Update availability successfully");
     }
 }

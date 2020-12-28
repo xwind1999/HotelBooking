@@ -47,4 +47,9 @@ class BookingRoomRepository extends ServiceEntityRepository
         ;
     }
     */
+
+    public function findAllBookingRoom(): array
+    {
+        return $this->findAll();
+    }
 }

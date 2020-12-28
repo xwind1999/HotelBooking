@@ -2,14 +2,8 @@
 
 namespace App\Controller;
 
-use App\Entity\Booking;
-use App\Entity\BookingRoom;
-use App\Entity\PriceList;
-use App\Entity\Room;
-use Cassandra\Date;
-use DateTime;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Manager\RepositoryManager;
+use App\Repository\BookingRoomRepository;
 use Exception;
 use FOS\RestBundle\Controller\Annotations as Rest;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,11 +14,14 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class BookingRoomController extends AbstractController
 {
-    private $entity_manager;
+    /**
+     * @var BookingRoomRepository
+     */
+    private $repositoryManager;
 
-    public function __construct(EntityManagerInterface $entity_manager)
+    public function __construct(RepositoryManager $repositoryManager)
     {
-        $this->entity_manager = $entity_manager;
+        $this->repositoryManager = $repositoryManager;
     }
     /**
      * @Route("/booking/room", name="booking_room")
@@ -38,65 +35,23 @@ class BookingRoomController extends AbstractController
     }
 
     /**
-     * @Rest\Get("/bookingrooms")
+     * @Rest\Get("/bookingrooms")get
      */
     public function getAllBookingRooms(): JsonResponse
     {
-        $bookings = $this->entity_manager->getRepository(BookingRoom::class)->findAll();
-        return new JsonResponse($bookings);
+        return new JsonResponse($this->repositoryManager->getAllBookingRooms());
     }
-
-//    /**
-//     * @Rest\Post("/new/bookingroom")
-//     * @param Request $request
-//     * @return JsonResponse
-//     * @throws Exception
-//     */
-//    public function newBookingRoom(Request $request): JsonResponse
-//    {
-//        $content = json_decode($request->getContent(),true);
-//        foreach ($content as $item) {
-//            $booking_room = new BookingRoom();
-//            $booking_room->setBookingId($this->entity_manager->getRepository(Booking::class)->find($item['booking_id_id']))
-//                ->setRoomId($this->entity_manager->getRepository(Room::class)->find($item['room_id_id']))
-//                ->setNumber($item['number'])
-//                ->setStartDate(new DateTime($item['start_date']))
-//                ->setEndDate(new DateTime($item['end_date']));
-//            $this->entity_manager->persist($booking_room);
-//        }
-//        $this->entity_manager->flush();
-//        return new JsonResponse("Import Booking room successfully");
-//    }
 
     /**
      * @param Request $request
      * @Rest\Post("/complete")
+     * @return JsonResponse
      * @throws Exception
      */
-    public function newCompleteBooking(Request $request)
+    public function newCompleteBooking(Request $request): JsonResponse
     {
-        $content = json_decode($request->getContent(), true);
-        $userId = $content["user_id"];
-        $book_time = new DateTime($content["book_time"]);
-        $bookings = $content["bookings"];
-        $totalPrice = 0;
-        foreach ($bookings as $item) {
-            $booking_room = new BookingRoom();
-            $booking_room->setBookingId($this->entity_manager->getRepository(Booking::class)->find($item['booking_id_id']))
-                ->setRoomId($this->entity_manager->getRepository(Room::class)->find($item['room_id_id']))
-                ->setNumber($item['number'])
-                ->setStartDate(new DateTime($item['start_date']))
-                ->setEndDate(new DateTime($item['end_date']));
-            $totalPrice += $this->entity_manager->getRepository(PriceList::class)->findOneBy(array(
-                'room_id'=>$this->entity_manager->getRepository(Room::class)->find($item['room_id_id']),
-                'date' => $book_time
-            ))->getPrice();
-            dd($totalPrice);
-            $this->entity_manager->persist($booking_room);
-        }
-
-        $this->entity_manager->flush();
-        dd($content);
+        $this->repositoryManager->bookingRoom($request);
+        return $this->json("Insert Booking Room successfully");
     }
 
 }

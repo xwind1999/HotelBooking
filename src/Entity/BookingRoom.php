@@ -9,7 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 /**
  * @ORM\Entity(repositoryClass=BookingRoomRepository::class)
  */
-class BookingRoom
+class BookingRoom implements \JsonSerializable
 {
     /**
      * @ORM\Id
@@ -108,5 +108,10 @@ class BookingRoom
         $this->endDate = $endDate;
 
         return $this;
+    }
+
+    public function jsonSerialize(): array
+    {
+        return get_object_vars($this);
     }
 }
