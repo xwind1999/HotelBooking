@@ -40,6 +40,11 @@ class Booking implements \JsonSerializable
      */
     private $bookTime;
 
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $status;
+
     public function __construct()
     {
         $this->bookingRooms = new ArrayCollection();
@@ -117,6 +122,18 @@ class Booking implements \JsonSerializable
     public function setBookTime(\DateTimeInterface $bookTime): self
     {
         $this->bookTime = $bookTime;
+
+        return $this;
+    }
+
+    public function getStatus(): ?int
+    {
+        return $this->status;
+    }
+
+    public function setStatus(int $status): self
+    {
+        $this->status = $status;
 
         return $this;
     }

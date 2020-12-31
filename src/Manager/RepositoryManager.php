@@ -4,7 +4,6 @@
 namespace App\Manager;
 
 
-use App\Controller\RoomController;
 use App\Entity\Availability;
 use App\Entity\Booking;
 use App\Entity\BookingRoom;
@@ -18,14 +17,16 @@ use App\Repository\CustomerRepository;
 use App\Repository\PriceListRepository;
 use App\Repository\RoomRepository;
 use DateTime;
-use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
+use Exception;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
+
 class RepositoryManager
 {
+    const DATEFORMAT = 'd-m-Y';
     /**
      * @var AvailabilityRepository
      */
@@ -112,36 +113,57 @@ class RepositoryManager
         $this->priceListRepository = $priceListRepository;
     }
 
+    /**
+     * @return array
+     */
     public function getAllBookingRooms(): array
     {
         return $this->bookingRoomRepository->findAll();
     }
 
+    /**
+     * @return array
+     */
     public function getAllCustomers(): array
     {
         return $this->customerRepository->findAll();
     }
 
+    /**
+     * @return array
+     */
     public function getAllPriceLists(): array
     {
         return $this->priceListRepository->findAll();
     }
 
+    /**
+     * @return array
+     */
     public function getAllRooms(): array
     {
         return $this->roomRepository->findAll();
     }
 
+    /**
+     * @return array
+     */
     public function getAllBookings(): array
     {
         return $this->bookingRepository->findAll();
     }
 
+    /**
+     * @return array
+     */
     public function getAllAvailabilities(): array
     {
         return $this->availabilityRepository->findAll();
     }
 
+    /**
+     * @param Request $request
+     */
     public function newCustomer(Request $request)
     {
         $requestJson = $this->decodeRequest($request);
@@ -157,22 +179,38 @@ class RepositoryManager
         $this->entityManager->flush();
     }
 
+    /**
+     * @param Request $request
+     * @return mixed
+     */
     private function decodeRequest(Request $request)
     {
         return json_decode($request->getContent(),true);
     }
 
+    /**
+     * @param $id
+     * @return Customer|null
+     */
     public function findCustomerById($id): ?Customer
     {
         return $this->customerRepository->find($id);
     }
 
+    /**
+     * @param Request $request
+     * @return array
+     */
     public function findCustomer(Request $request): array
     {
         $requestJson = $this->decodeRequest($request);
         return $this->customerRepository->findBy(["name" => $requestJson["name"] ]);
     }
 
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
     public function updateCustomer(Request $request): JsonResponse
     {
         $requestJson = $this->decodeRequest($request);
@@ -185,6 +223,9 @@ class RepositoryManager
         return new JsonResponse($customer);
     }
 
+    /**
+     * @param $customerId
+     */
     public function deleteCustomerById($customerId)
     {
         $customer = $this->customerRepository->find($customerId);
@@ -192,44 +233,149 @@ class RepositoryManager
         $this->entityManager->flush();
     }
 
+    /**
+     * @param $id
+     * @return Room|null
+     */
     public function findRoomById($id): ?Room
     {
         return $this->roomRepository->find($id);
     }
 
+    /**
+     * @param Request $request
+     * @throws Exception
+     */
     public function bookingRoom(Request $request){
-        $requestJson = $this->decodeRequest($request->getContent(), true);
+        $requestJson = $this->decodeRequest($request);
         $userId = $requestJson["user_id"];
-        $book_time = new DateTime($requestJson["book_time"]);
+        $bookTime = new DateTime($requestJson["book_time"]);
         $bookings = $requestJson["bookings"];
         $totalPrice = 0;
-        // New Booking object
+
+        // Create a new Booking
         $booking = new Booking();
         $booking->setCustomer(
             $this->findCustomerById($userId)
         )
-            ->setBookTime($book_time);
-        //booking_room list
+            ->setBookTime($bookTime)
+            ->setStatus(0);
+
+        // booking_room list
         foreach ($bookings as $item) {
-            $booking_room = new BookingRoom();
-            $booking_room->setBookingId($booking)
-                ->setRoomId($this->findRoomById($item['room_id_id']))
-                ->setNumber($item['number'])
-                ->setStartDate(new DateTime($item['start_date']))
-                ->setEndDate(new DateTime($item['end_date']));
-            //calculate the total price
-            $totalPrice += $this->priceListRepository->findOneBy(array(
-                    'room'=>$this->findRoomById($item['room_id_id']),
-                    'date' => $book_time
-                ))->getPrice() * $item['number'];
-            $this->entityManager->persist($booking_room);
+            $dateOfBookings = $this->getSchedule(new DateTime($item['start_date']), new DateTime($item['end_date']));
+
+            // Check if booking status is OK
+            if($this->isAvailabilities($dateOfBookings, $item['number'], $item['room_id_id']))
+            {
+
+                // Add new Booking Room
+                $bookingRoom = new BookingRoom();
+                $bookingRoom->setBookingId($booking)
+                    ->setRoomId($this->findRoomById($item['room_id_id']))
+                    ->setNumber($item['number'])
+                    ->setStatus(0)
+                    ->setStartDate(new DateTime($item['start_date']))
+                    ->setEndDate(new DateTime($item['end_date']));
+
+                // Calculate the total price
+                foreach ($dateOfBookings as $dateOfBooking) {
+                    $totalPrice += $this->priceListRepository->findOneBy(array(
+                            'room' => $this->findRoomById($item['room_id_id']),
+                            'date' => new DateTime($dateOfBooking)
+                        ))->getPrice() * $item['number'];
+                    // Change Availability
+//                    $this->changeAvailability($item['room_id_id'], $item['number'], new DateTime($dateOfBooking));
+                }
+                $this->entityManager->persist($bookingRoom);
+            }
+            else
+            {
+                $roomId = $item['room_id_id'];
+                $quantity = $item['number'];
+                $startDate = $item['start_date'];
+                $endDate = $item['end_date'];
+                $this->refuseBooking($roomId, $quantity, $startDate, $endDate);
+            }
         }
+
         //Set Total Price
         $booking->setTotalPrice($totalPrice);
         $this->entityManager->persist($booking);
         $this->entityManager->flush();
     }
 
+    /**
+     * @param $roomId
+     * @param $quantity
+     * @param $startDate
+     * @param $endDate
+     */
+    private function refuseBooking($roomId, $quantity, $startDate, $endDate)
+    {
+        echo("Booking not complete" . PHP_EOL);
+        echo("Room : " . $this->roomRepository->find($roomId)->getName() . PHP_EOL);
+        echo("Quantity : " . $quantity . PHP_EOL);
+        echo("Start Date : " . $startDate . PHP_EOL);
+        echo("End Date : " . $endDate.PHP_EOL);
+    }
+
+    /**
+     * @param int $roomId
+     * @param int $quantity
+     * @param DateTime $time
+     */
+    public function changeAvailability(int $roomId, int $quantity, DateTime $time)
+    {
+        $availability = $this->availabilityRepository->findOneBy([
+            "room" => $this->findRoomById($roomId),
+            "date" => $time
+        ]);
+        $availability->setStock($availability->getStock() - $quantity);
+        $this->entityManager->persist($availability);
+    }
+
+    /**
+     * @param DateTime $startDate
+     * @param DateTime $endDate
+     * @return array
+     */
+    public function getSchedule(DateTime $startDate, DateTime $endDate): array
+    {
+        $dates = [];
+        $interval = date_diff($startDate, $endDate)->days;
+        for ($i = 0; $i <= $interval ; $i++){
+            $dates[] = date(self::DATEFORMAT, strtotime($startDate->format(self::DATEFORMAT) ."+".$i." day"));
+        }
+        return $dates;
+    }
+
+    /**
+     * Check if booking condition is passed
+     * @param array $dates
+     * @param $quantity
+     * @param $roomId
+     * @return bool
+     * @throws Exception
+     */
+    private function isAvailabilities(array $dates, $quantity, $roomId): bool
+    {
+        foreach ($dates as $date) {
+            $availability = $this->availabilityRepository->findOneBy([
+                "date"=>new DateTime($date),
+                "room"=>$this->findRoomById($roomId)
+            ]);
+            if ($quantity > $availability->getStock() || !$availability->getStopSale())
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @param Request $request
+     */
     public function newRoom(Request $request)
     {
         $responseJson = $this->decodeRequest($request);
@@ -245,6 +391,10 @@ class RepositoryManager
         $this->entityManager->flush();
     }
 
+    /**
+     * @param Request $request
+     * @return Room|null
+     */
     public function updateRoom(Request $request): ?Room
     {
         $responseJson = $this->decodeRequest($request);
@@ -256,12 +406,19 @@ class RepositoryManager
         $this->entityManager->flush();
     }
 
+    /**
+     * @param $id
+     */
     public function deleteRoom($id)
     {
         $room = $this->roomRepository->find($id);
         $this->entityManager->remove($room);
     }
 
+    /**
+     * @param Request $request
+     * @throws Exception
+     */
     public function newAvailability(Request $request)
     {
         $requestJson = $this->decodeRequest($request);
@@ -269,7 +426,7 @@ class RepositoryManager
         $stock = $requestJson['stock'];
         $stopSale = $requestJson['stop_sale'];
         $roomId = $requestJson['room_id'];
-        if (empty($date) || empty($stock) || empty($stop_sale) || empty($room_id)){
+        if (empty($date) || empty($stock) || empty($stopSale) || empty($roomId)){
             throw new NotFoundHttpException('Missing argument');
         }
         $availability = new Availability();
@@ -281,6 +438,10 @@ class RepositoryManager
         $this->entityManager->flush();
     }
 
+    /**
+     * @param Request $request
+     * @throws Exception
+     */
     public function updateAvailability(Request $request)
     {
         $requestJson = $this->decodeRequest($request);
@@ -292,6 +453,90 @@ class RepositoryManager
         empty($requestJson["room_id"]) ? true : $availability->setRoom($this->findRoomById($requestJson["room_id"]));
         $this->entityManager->persist($availability);
         $this->entityManager->flush();
+    }
 
+    /**
+     * @param $id
+     * @return PriceList|null
+     */
+    public function findPriceListById($id): ?PriceList
+    {
+        return $this->priceListRepository->find($id);
+    }
+
+    /**
+     * @param Request $request
+     * @throws Exception
+     */
+    public function newPriceList(Request $request)
+    {
+        $responseJson = $this->decodeRequest($request);
+        $roomId = $responseJson['room_id'];
+        $date = new DateTime($responseJson['date']);
+        $price = $responseJson['price'];
+
+        if (empty($roomId) || empty($date) || empty($price)){
+            throw new NotFoundHttpException('Missing argument');
+        }
+        $priceList = new PriceList();
+        $priceList->setRoom($this->findRoomById($roomId))
+            ->setDate($date)
+            ->setPrice($price);
+        $this->entityManager->persist($priceList);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @param Request $request
+     * @throws Exception
+     */
+    public function updatePriceList(Request $request)
+    {
+        $responseJson = $this->decodeRequest($request);
+        $priceListId = $responseJson["id"];
+        /** @var PriceList $priceList */
+        $priceList = $this->findRoomById($priceListId);
+        empty($responseJson["date"]) ? true : $priceList->setDate(new DateTime($responseJson["date"]));
+        empty($responseJson["price"]) ? true : $priceList->setPrice($responseJson["price"]);
+        empty($responseJson["room_id"]) ? true : $priceList->setRoom($this->findRoomById($responseJson["room_id"]));
+        $this->entityManager->persist($priceList);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * Change the booking status
+     * @param Request $request
+     * @throws Exception
+     */
+    public function changeBookingStatus(Request $request)
+    {
+        $requestJson = $this->decodeRequest($request);
+        $bookingId = $requestJson["booking_id"];
+        $status = $requestJson["status"];
+
+        // set status
+        $this->bookingRepository->find($bookingId)->setStatus($status);
+        $bookingRoomOfBooking = $this->bookingRoomOfBooking($bookingId);
+        /** @var BookingRoom $bookingRoom */
+        foreach ($bookingRoomOfBooking as $bookingRoom)
+        {
+            $dateOfBookings = $this->getSchedule($bookingRoom->getStartDate(), $bookingRoom->getEndDate());
+            foreach ($dateOfBookings as $dateOfBooking) {
+                // Change Availability
+                $this->changeAvailability($bookingRoom->getRoomId()->getId(), $bookingRoom->getNumber(), new DateTime($dateOfBooking));
+            }
+        }
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @param int $bookingId
+     * @return array
+     */
+    public function bookingRoomOfBooking(int $bookingId): array
+    {
+        return $this->bookingRoomRepository->findBy([
+            "booking_id" => $bookingId
+        ]);
     }
 }

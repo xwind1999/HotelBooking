@@ -44,7 +44,7 @@ class BookingRoomController extends AbstractController
 
     /**
      * @param Request $request
-     * @Rest\Post("/complete")
+     * @Rest\Post("/complete/booking")
      * @return JsonResponse
      * @throws Exception
      */
@@ -53,5 +53,4 @@ class BookingRoomController extends AbstractController
         $this->repositoryManager->bookingRoom($request);
         return $this->json("Insert Booking Room successfully");
     }
-
 }

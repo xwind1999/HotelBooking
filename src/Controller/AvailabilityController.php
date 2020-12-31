@@ -2,8 +2,6 @@
 
 namespace App\Controller;
 
-use App\Entity\Availability;
-use App\Entity\Room;
 use App\Manager\RepositoryManager;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -13,7 +11,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Annotation\Route;
 
 class AvailabilityController extends AbstractController

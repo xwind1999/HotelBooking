@@ -45,6 +45,11 @@ class BookingRoom implements \JsonSerializable
      */
     private $endDate;
 
+    /**
+     * @ORM\Column(type="integer")
+     */
+    private $status;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -113,5 +118,17 @@ class BookingRoom implements \JsonSerializable
     public function jsonSerialize(): array
     {
         return get_object_vars($this);
+    }
+
+    public function getStatus(): ?int
+    {
+        return $this->status;
+    }
+
+    public function setStatus(int $status): self
+    {
+        $this->status = $status;
+
+        return $this;
     }
 }
