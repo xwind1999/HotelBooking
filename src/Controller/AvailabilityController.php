@@ -3,7 +3,6 @@
 namespace App\Controller;
 
 use App\Manager\RepositoryManager;
-use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Exception;
 use FOS\RestBundle\Controller\Annotations as Rest;

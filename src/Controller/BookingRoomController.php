@@ -53,4 +53,5 @@ class BookingRoomController extends AbstractController
         $this->repositoryManager->bookingRoom($request);
         return $this->json("Insert Booking Room successfully");
     }
+
 }
