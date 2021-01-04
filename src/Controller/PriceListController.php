@@ -2,7 +2,6 @@
 
 namespace App\Controller;
 
-use App\Entity\PriceList;
 use App\Manager\RepositoryManager;
 use Exception;
 use FOS\RestBundle\Controller\Annotations as Rest;
@@ -14,7 +13,6 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class PriceListController extends AbstractController
 {
-    private $entityManager;
     /**
      * @var RepositoryManager
      */
@@ -39,6 +37,7 @@ class PriceListController extends AbstractController
     /**
      * @Rest\Get("/pricelist/{id}")
      * @param $id
+     * @return JsonResponse
      */
     public function getPriceListById($id): JsonResponse
     {
@@ -74,7 +73,6 @@ class PriceListController extends AbstractController
      */
     public function getAllPriceLists(): JsonResponse
     {
-        $priceLists = $this->entityManager->getRepository(PriceList::class)->findAll();
-        return new JsonResponse($priceLists);
+        return new JsonResponse($this->repositoryManager->getAllPriceLists());
     }
 }

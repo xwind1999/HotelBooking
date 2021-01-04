@@ -64,7 +64,7 @@ class AvailabilityController extends AbstractController
      */
     public function updateAvailability(Request $request): JsonResponse
     {
-        $this->updateAvailability($request);
+        $this->repositoryManager->updateAvailability($request);
         return $this->json("Update availability successfully");
     }
 }

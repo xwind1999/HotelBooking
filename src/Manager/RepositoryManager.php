@@ -284,8 +284,6 @@ class RepositoryManager
                             'room' => $this->findRoomById($item['room_id_id']),
                             'date' => new DateTime($dateOfBooking)
                         ))->getPrice() * $item['number'];
-                    // Change Availability
-//                    $this->changeAvailability($item['room_id_id'], $item['number'], new DateTime($dateOfBooking));
                 }
                 $this->entityManager->persist($bookingRoom);
             }
@@ -324,14 +322,19 @@ class RepositoryManager
      * @param int $roomId
      * @param int $quantity
      * @param DateTime $time
+     * @param int $status
      */
-    public function changeAvailability(int $roomId, int $quantity, DateTime $time)
+    public function changeAvailability(int $roomId, int $quantity, DateTime $time, int $status)
     {
         $availability = $this->availabilityRepository->findOneBy([
             "room" => $this->findRoomById($roomId),
             "date" => $time
         ]);
-        $availability->setStock($availability->getStock() - $quantity);
+        if( $status == 0 ){
+            $availability->setStock($availability->getStock() - $quantity);
+        }else if ( $status == 1){
+            $availability->setStock($availability->getStock() + $quantity);
+        }
         $this->entityManager->persist($availability);
     }
 
@@ -514,18 +517,41 @@ class RepositoryManager
         $bookingId = $requestJson["booking_id"];
         $status = $requestJson["status"];
 
-        // set status
-        $this->bookingRepository->find($bookingId)->setStatus($status);
+        // Change Booking status
+        $booking = $this->bookingRepository->find($bookingId);
+
+        // Return all BookingRoom of identify Booking
         $bookingRoomOfBooking = $this->bookingRoomOfBooking($bookingId);
-        /** @var BookingRoom $bookingRoom */
-        foreach ($bookingRoomOfBooking as $bookingRoom)
-        {
-            $dateOfBookings = $this->getSchedule($bookingRoom->getStartDate(), $bookingRoom->getEndDate());
-            foreach ($dateOfBookings as $dateOfBooking) {
-                // Change Availability
-                $this->changeAvailability($bookingRoom->getRoomId()->getId(), $bookingRoom->getNumber(), new DateTime($dateOfBooking));
+
+        // When booking status set to 1 (approved)
+        if($status == 1){
+            /** @var BookingRoom $bookingRoom */
+            foreach ($bookingRoomOfBooking as $bookingRoom)
+            {
+                $dateOfBookings = $this->getSchedule($bookingRoom->getStartDate(), $bookingRoom->getEndDate());
+                foreach ($dateOfBookings as $dateOfBooking) {
+
+                    // Change Availability
+                    $this->changeAvailability($bookingRoom->getRoomId()->getId(), $bookingRoom->getNumber(), new DateTime($dateOfBooking), 0);
+                }
             }
         }
+        // When booking status set to 2 (ended)
+        else if ($status == 2)
+        {
+            // Check if current status == 1
+            if($booking->getStatus() == 1) {
+                /** @var BookingRoom $bookingRoom */
+                foreach ($bookingRoomOfBooking as $bookingRoom) {
+                    $dateOfBookings = $this->getSchedule($bookingRoom->getStartDate(), $bookingRoom->getEndDate());
+                    foreach ($dateOfBookings as $dateOfBooking) {
+                        // Change Availability
+                        $this->changeAvailability($bookingRoom->getRoomId()->getId(), $bookingRoom->getNumber(), new DateTime($dateOfBooking), 1);
+                    }
+                }
+            }
+        }
+        $booking->setStatus($status);
         $this->entityManager->flush();
     }
 
